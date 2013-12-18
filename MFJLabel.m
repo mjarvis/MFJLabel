@@ -236,7 +236,7 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
 
 - (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines
 {
-    if (bounds.size.width > self.preferredMaxLayoutWidth)
+    if (self.preferredMaxLayoutWidth > 0 && bounds.size.width > self.preferredMaxLayoutWidth)
     {
         bounds.size.width = self.preferredMaxLayoutWidth;
     }
