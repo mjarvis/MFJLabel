@@ -160,6 +160,9 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
 {
     _textStorage = textStorage;
 
+    [self.timer invalidate];
+    self.linkRange = NSMakeRange(NSNotFound, 0);
+
     [self setNeedsDisplay];
 }
 
