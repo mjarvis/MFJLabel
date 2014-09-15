@@ -360,6 +360,11 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch
 {
+    if ([self.textStorage length] == 0)
+    {
+        return NO;
+    }
+
     CGPoint location = [touch locationInView:self];
 
     NSLayoutManager *layoutManager = [self.textStorage.layoutManagers firstObject];
