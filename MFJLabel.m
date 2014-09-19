@@ -292,16 +292,23 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
         NSUInteger glyphIndex = [layoutManager glyphIndexForPoint:location inTextContainer:textContainer];
         NSUInteger characterIndex = [layoutManager characterIndexForGlyphAtIndex:glyphIndex];
 
-        NSRange effectiveRange;
-        NSDictionary *attributes = [self.textStorage attributesAtIndex:characterIndex
-                                                        effectiveRange:&effectiveRange];
+        CGRect boundingRect = [layoutManager boundingRectForGlyphRange:NSMakeRange(glyphIndex, 1)
+                                                       inTextContainer:textContainer];
 
-        self.linkRange = effectiveRange;
-        self.timer = [NSTimer scheduledTimerWithTimeInterval:0.75
-                                                      target:self
-                                                    selector:@selector(timerFired:)
-                                                    userInfo:attributes
-                                                     repeats:NO];
+        if (CGRectContainsPoint(boundingRect, location))
+        {
+            NSRange effectiveRange;
+            NSDictionary *attributes = [self.textStorage attributesAtIndex:characterIndex
+                                                            effectiveRange:&effectiveRange];
+
+            self.linkRange = effectiveRange;
+            self.timer = [NSTimer scheduledTimerWithTimeInterval:0.75
+                                                          target:self
+                                                        selector:@selector(timerFired:)
+                                                        userInfo:attributes
+                                                         repeats:NO];
+        }
+
     }
     else if ([sender state] == UIGestureRecognizerStateChanged)
     {
@@ -372,6 +379,14 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
 
     NSUInteger glyphIndex = [layoutManager glyphIndexForPoint:location inTextContainer:textContainer];
     NSUInteger characterIndex = [layoutManager characterIndexForGlyphAtIndex:glyphIndex];
+
+    CGRect boundingRect = [layoutManager boundingRectForGlyphRange:NSMakeRange(glyphIndex, 1)
+                                                   inTextContainer:textContainer];
+
+    if (CGRectContainsPoint(boundingRect, location) == NO)
+    {
+        return NO;
+    }
 
     NSRange effectiveRange;
     NSDictionary *attributes = [self.textStorage attributesAtIndex:characterIndex
