@@ -61,10 +61,17 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
                             NSUnderlineColorAttributeName: [UIColor blueColor],
                             };
         _dataDetectorTypes = MFJDataDetectorTypeDate|MFJDataDetectorTypeAddress|MFJDataDetectorTypeLink|MFJDataDetectorTypePhoneNumber;
+    }
+    return self;
+}
+
+- (NSDataDetector *)dataDetector {
+    if (_dataDetector == nil && _dataDetectorTypes != 0) 
+    {
         _dataDetector = [[NSDataDetector alloc] initWithTypes:_dataDetectorTypes
                                                         error:NULL];
     }
-    return self;
+    return _dataDetector;
 }
 
 - (void)setText:(NSString *)text
@@ -205,33 +212,36 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
         [textStorage addAttributes:attributes
                              range:NSMakeRange(0, [textStorage length])];
 
-        NSArray *matches = [self.dataDetector matchesInString:[textStorage string]
-                                                      options:0
-                                                        range:NSMakeRange(0, [textStorage length])];
-        for (NSTextCheckingResult *match in matches)
+        if (self.dataDetector != nil) 
         {
-            NSMutableDictionary *linkAttributes = [self.linkAttributes ?: @{} mutableCopy];
+            NSArray *matches = [self.dataDetector matchesInString:[textStorage string]
+                                                          options:0
+                                                            range:NSMakeRange(0, [textStorage length])];
+            for (NSTextCheckingResult *match in matches)
             {
-                switch (match.resultType)
+                NSMutableDictionary *linkAttributes = [self.linkAttributes ?: @{} mutableCopy];
                 {
-                    case NSTextCheckingTypeLink:
-                        linkAttributes[MFJLabelLinkAttributeName] = match.URL;
-                        break;
-                    case NSTextCheckingTypePhoneNumber:
-                        linkAttributes[MFJLabelPhoneNumberAttributeName] = match.phoneNumber;
-                        break;
-                    case NSTextCheckingTypeAddress:
-                        linkAttributes[MFJLabelAddressAttributeName] = match.addressComponents;
-                        break;
-                    case NSTextCheckingTypeDate:
-                        linkAttributes[MFJLabelDateAttributeName] = match.date;
-                        break;
-                    default:
-                        break;
+                    switch (match.resultType)
+                    {
+                        case NSTextCheckingTypeLink:
+                            linkAttributes[MFJLabelLinkAttributeName] = match.URL;
+                            break;
+                        case NSTextCheckingTypePhoneNumber:
+                            linkAttributes[MFJLabelPhoneNumberAttributeName] = match.phoneNumber;
+                            break;
+                        case NSTextCheckingTypeAddress:
+                            linkAttributes[MFJLabelAddressAttributeName] = match.addressComponents;
+                            break;
+                        case NSTextCheckingTypeDate:
+                            linkAttributes[MFJLabelDateAttributeName] = match.date;
+                            break;
+                        default:
+                            break;
+                    }
                 }
+                [textStorage addAttributes:linkAttributes
+                                     range:[match range]];
             }
-            [textStorage addAttributes:linkAttributes
-                                 range:[match range]];
         }
     }
     return textStorage;
