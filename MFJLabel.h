@@ -54,6 +54,11 @@ typedef NS_OPTIONS(uint64_t, MFJDataDetectorType)
 @property (nonatomic, copy) NSTextStorage *textStorage;
 
 /**
+ * The orginal attributed string set on the label. Apple manipulates the attributed string on the label and we end up loosing attributes when setting `textColor` and `font` on the label.
+ */
+
+@property (nonatomic, copy) NSAttributedString *originalAttributedString;
+/**
  *  Available NSTextCheckingType values are defined in MFJDataDetectorType.
  *  Defaults to all available types.
  */
