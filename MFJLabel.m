@@ -61,24 +61,77 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
                             NSUnderlineColorAttributeName: [UIColor blueColor],
                             };
         _dataDetectorTypes = MFJDataDetectorTypeDate|MFJDataDetectorTypeAddress|MFJDataDetectorTypeLink|MFJDataDetectorTypePhoneNumber;
+    }
+    return self;
+}
+
+- (void)invalidateTextStorage
+{
+    [self.timer invalidate];
+    self.linkRange = NSMakeRange(NSNotFound, 0);
+    self.textStorage = nil;
+    [self setNeedsDisplay];
+}
+
+- (void)ensureTextStorage
+{
+    if (self.textStorage == nil)
+    {
+        self.textStorage = [self textStorageWithDetectedLinksForAttributedString:self.attributedText];
+    }
+}
+
+- (NSDataDetector *)dataDetector
+{
+    if (_dataDetector == nil && _dataDetectorTypes != 0)
+    {
         _dataDetector = [[NSDataDetector alloc] initWithTypes:_dataDetectorTypes
                                                         error:NULL];
     }
-    return self;
+    return _dataDetector;
 }
 
 - (void)setText:(NSString *)text
 {
     [super setText:text];
-
-    self.textStorage = [self textStorageWithDetectedLinksForAttributedString:self.attributedText];
+    [self invalidateTextStorage];
 }
 
 - (void)setAttributedText:(NSAttributedString *)attributedText
 {
+    self.originalAttributedString = attributedText;
     [super setAttributedText:attributedText];
+    [self invalidateTextStorage];
+}
 
-    self.textStorage = [self textStorageWithDetectedLinksForAttributedString:attributedText];
+- (NSAttributedString *)attributedText 
+{
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithAttributedString:self.originalAttributedString];
+    NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+    {
+        paragraphStyle.lineBreakMode = self.lineBreakMode;
+        paragraphStyle.alignment = self.textAlignment;
+    }
+
+    NSDictionary *attributes = @{
+                                 NSParagraphStyleAttributeName: paragraphStyle,
+                                 NSFontAttributeName: self.font,
+                                 NSForegroundColorAttributeName: self.textColor,
+                                 };
+
+    [string addAttributes:attributes
+                    range:NSMakeRange(0, [string length])];
+
+    [self.originalAttributedString enumerateAttributesInRange:NSMakeRange(0, self.originalAttributedString.length)
+                                                      options:NSAttributedStringEnumerationReverse
+                                                   usingBlock:^(NSDictionary *attrs, NSRange range, BOOL *stop) {
+                                                       if (attrs[MFJLabelLinkAttributeName] != nil)
+                                                       {
+                                                           [string addAttributes:self.linkAttributes range:range];
+                                                       }
+                                                       [string addAttributes:attrs range:range];
+                                                   }];
+    return string;
 }
 
 - (void)setDataDetectorTypes:(MFJDataDetectorType)dataDetectorTypes
@@ -87,83 +140,42 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
 
     self.dataDetector = dataDetectorTypes ? [[NSDataDetector alloc] initWithTypes:dataDetectorTypes
                                                                             error:NULL] : nil;
-
-    self.textStorage = [self textStorageWithDetectedLinksForAttributedString:self.attributedText];
+    [self invalidateTextStorage];
 }
 
 - (void)setTextColor:(UIColor *)textColor
 {
     [super setTextColor:textColor];
-
-    [self.textStorage addAttribute:NSForegroundColorAttributeName
-                             value:textColor
-                             range:NSMakeRange(0, [self.textStorage length])];
-
-    [self setNeedsDisplay];
-}
-
-- (void)setFont:(UIFont *)font
-{
-    [super setFont:font];
-
-    [self.textStorage addAttribute:NSFontAttributeName
-                             value:font
-                             range:NSMakeRange(0, [self.textStorage length])];
-
-    [self setNeedsDisplay];
-}
-
-- (void)setLineBreakMode:(NSLineBreakMode)lineBreakMode
-{
-    [super setLineBreakMode:lineBreakMode];
-
-    NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
-    {
-        paragraphStyle.lineBreakMode = lineBreakMode;
-        paragraphStyle.alignment = self.textAlignment;
-    }
-    [self.textStorage addAttribute:NSParagraphStyleAttributeName
-                             value:paragraphStyle
-                             range:NSMakeRange(0, [self.textStorage length])];
-
-    NSLayoutManager *layoutManager = [self.textStorage.layoutManagers firstObject];
-    NSTextContainer *textContainer = [layoutManager.textContainers firstObject];
-    textContainer.lineBreakMode = lineBreakMode;
-
-    [self setNeedsDisplay];
-}
-
-- (void)setTextAlignment:(NSTextAlignment)textAlignment
-{
-    [super setTextAlignment:textAlignment];
-
-    NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
-    {
-        paragraphStyle.lineBreakMode = self.lineBreakMode;
-        paragraphStyle.alignment = textAlignment;
-    }
-    [self.textStorage addAttribute:NSParagraphStyleAttributeName
-                             value:paragraphStyle
-                             range:NSMakeRange(0, [self.textStorage length])];
-
-    [self setNeedsDisplay];
-}
-
-- (void)setLinkAttributes:(NSDictionary *)linkAttributes
-{
-    _linkAttributes = linkAttributes;
-
-    self.textStorage = [self textStorageWithDetectedLinksForAttributedString:self.attributedText];
+    [self invalidateTextStorage];
 }
 
 - (void)setTextStorage:(NSTextStorage *)textStorage
 {
     _textStorage = textStorage;
+}
 
-    [self.timer invalidate];
-    self.linkRange = NSMakeRange(NSNotFound, 0);
+- (void)setFont:(UIFont *)font
+{
+    [super setFont:font];
+    [self invalidateTextStorage];
+}
 
-    [self setNeedsDisplay];
+- (void)setLineBreakMode:(NSLineBreakMode)lineBreakMode
+{
+    [super setLineBreakMode:lineBreakMode];
+    [self invalidateTextStorage];
+}
+
+- (void)setTextAlignment:(NSTextAlignment)textAlignment
+{
+    [super setTextAlignment:textAlignment];
+    [self invalidateTextStorage];
+}
+
+- (void)setLinkAttributes:(NSDictionary *)linkAttributes
+{
+    _linkAttributes = linkAttributes;
+    [self invalidateTextStorage];
 }
 
 - (void)setLinkRange:(NSRange)linkRange
@@ -192,46 +204,36 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
         }
         [textStorage addLayoutManager:layoutManager];
 
-        NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+        if (self.dataDetector != nil) 
         {
-            paragraphStyle.lineBreakMode = self.lineBreakMode;
-            paragraphStyle.alignment = self.textAlignment;
-        }
-        NSDictionary *attributes = @{
-                                     NSParagraphStyleAttributeName: paragraphStyle,
-                                     NSFontAttributeName: self.font,
-                                     NSForegroundColorAttributeName: self.textColor,
-                                     };
-        [textStorage addAttributes:attributes
-                             range:NSMakeRange(0, [textStorage length])];
-
-        NSArray *matches = [self.dataDetector matchesInString:[textStorage string]
-                                                      options:0
-                                                        range:NSMakeRange(0, [textStorage length])];
-        for (NSTextCheckingResult *match in matches)
-        {
-            NSMutableDictionary *linkAttributes = [self.linkAttributes ?: @{} mutableCopy];
+            NSArray *matches = [self.dataDetector matchesInString:[textStorage string]
+                                                          options:0
+                                                            range:NSMakeRange(0, [textStorage length])];
+            for (NSTextCheckingResult *match in matches)
             {
-                switch (match.resultType)
+                NSMutableDictionary *linkAttributes = [self.linkAttributes ?: @{} mutableCopy];
                 {
-                    case NSTextCheckingTypeLink:
-                        linkAttributes[MFJLabelLinkAttributeName] = match.URL;
-                        break;
-                    case NSTextCheckingTypePhoneNumber:
-                        linkAttributes[MFJLabelPhoneNumberAttributeName] = match.phoneNumber;
-                        break;
-                    case NSTextCheckingTypeAddress:
-                        linkAttributes[MFJLabelAddressAttributeName] = match.addressComponents;
-                        break;
-                    case NSTextCheckingTypeDate:
-                        linkAttributes[MFJLabelDateAttributeName] = match.date;
-                        break;
-                    default:
-                        break;
+                    switch (match.resultType)
+                    {
+                        case NSTextCheckingTypeLink:
+                            linkAttributes[MFJLabelLinkAttributeName] = match.URL;
+                            break;
+                        case NSTextCheckingTypePhoneNumber:
+                            linkAttributes[MFJLabelPhoneNumberAttributeName] = match.phoneNumber;
+                            break;
+                        case NSTextCheckingTypeAddress:
+                            linkAttributes[MFJLabelAddressAttributeName] = match.addressComponents;
+                            break;
+                        case NSTextCheckingTypeDate:
+                            linkAttributes[MFJLabelDateAttributeName] = match.date;
+                            break;
+                        default:
+                            break;
+                    }
                 }
+                [textStorage addAttributes:linkAttributes
+                                     range:[match range]];
             }
-            [textStorage addAttributes:linkAttributes
-                                 range:[match range]];
         }
     }
     return textStorage;
@@ -239,6 +241,8 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
 
 - (CGRect)textRectForBounds:(CGRect)bounds limitedToNumberOfLines:(NSInteger)numberOfLines
 {
+    [self ensureTextStorage];
+
     if (self.preferredMaxLayoutWidth > 0 && bounds.size.width > self.preferredMaxLayoutWidth)
     {
         bounds.size.width = self.preferredMaxLayoutWidth;
@@ -258,6 +262,8 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
 
 - (void)drawTextInRect:(CGRect)rect
 {
+    [self ensureTextStorage];
+
     rect = [self textRectForBounds:self.bounds
             limitedToNumberOfLines:0];
 
