@@ -401,4 +401,9 @@ NSString * const MFJLabelDateAttributeName        = @"MFJLabelDateAttributeName"
     return (attributes[MFJLabelLinkAttributeName] || attributes[MFJLabelPhoneNumberAttributeName] || attributes[MFJLabelAddressAttributeName] || attributes[MFJLabelDateAttributeName]);
 }
 
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+  return YES;
+}
+
 @end
