@@ -1,6 +1,6 @@
 {
   "name": "MFJLabel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "summary": "UILabel subclass with link detection using Core Text",
 
   "homepage": "https://github.com/mjarvis/MFJLabel",
@@ -11,7 +11,7 @@
   },
   "source": {
     "git": "https://github.com/mjarvis/MFJLabel.git",
-    "tag": "0.1.0"
+    "tag": "0.1.1"
   },
   "platforms": {
     "ios": "8.0"
